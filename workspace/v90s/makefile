@@ -1,0 +1,43 @@
+###########################################################
+
+ifeq (,$(PLATFORM))
+PLATFORM=$(UNION_PLATFORM)
+endif
+
+ifeq (,$(PLATFORM))
+$(error please specify PLATFORM, eg. PLATFORM=v90s make)
+endif
+
+###########################################################
+
+# The V90S stock OS ships SDL2 2.30 (+_image/_ttf) with its custom "fbgl"
+# EGL-framebuffer driver, so unlike h700 there is no in-tree SDL2 build:
+# binaries link against the toolchain's SDL2 and run against stock's.
+
+REQUIRES_EVTEST=other/evtest
+REQUIRES_JSTEST=other/jstest
+REQUIRES_UNZIP60=other/unzip60
+
+all: readmes
+
+early: $(REQUIRES_EVTEST) $(REQUIRES_JSTEST) $(REQUIRES_UNZIP60)
+	mkdir -p other
+	cd $(REQUIRES_EVTEST) && $(CROSS_COMPILE)gcc -o evtest evtest.c
+	cd $(REQUIRES_JSTEST) && $(CROSS_COMPILE)gcc -o jstest jstest.c
+	cd $(REQUIRES_UNZIP60) && make -f unix/Makefile.trimuismart unzip
+
+clean:
+	cd $(REQUIRES_UNZIP60) && make -f unix/Makefile.trimuismart clean
+
+###########################################################
+
+$(REQUIRES_EVTEST):
+	git clone --depth 1 https://github.com/freedesktop-unofficial-mirror/evtest.git $(REQUIRES_EVTEST)
+
+$(REQUIRES_JSTEST):
+	git clone --depth 1 https://github.com/datrh/joyutils.git $(REQUIRES_JSTEST)
+
+$(REQUIRES_UNZIP60):
+	git clone --depth 1 https://github.com/shauninman/unzip60.git $(REQUIRES_UNZIP60)
+
+include ../all/readmes/makefile
