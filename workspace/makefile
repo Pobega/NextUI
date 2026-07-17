@@ -51,8 +51,10 @@ endif
 	cd ./all/syncsettings/ && make
 	cd ./all/nextval/ && make
 	cd ./all/settings/ && make
+ifneq (,$(filter $(PLATFORM),tg5040 tg5050))
 	cd ./all/ledcontrol/ && make
 	cd ./all/bootlogo/ && make
+endif
 	cd ./all/audiomon && make all
 	cd ./all/show2/ && make
 endif

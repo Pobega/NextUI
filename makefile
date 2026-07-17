@@ -12,7 +12,7 @@ endif
 
 ifeq (,$(PLATFORMS))
 #PLATFORMS = miyoomini trimuismart rg35xx rg35xxplus my355 tg5040 zero28 rgb30 m17 gkdpixel my282 magicmini
-PLATFORMS = tg5050 tg5040
+PLATFORMS = tg5050 tg5040 v90s
 endif
 
 ###########################################################
@@ -111,7 +111,7 @@ ifeq ($(PLATFORM), tg5040)
 	cp ./workspace/$(PLATFORM)/poweroff_next/build/$(PLATFORM)/poweroff_next.elf ./build/SYSTEM/$(PLATFORM)/bin/poweroff_next
 endif
 endif
-ifneq (,$(filter $(PLATFORM),tg5040 tg5050 my355))
+ifneq (,$(filter $(PLATFORM),tg5040 tg5050 my355 v90s))
 	# Audio resampling
 	cp ./workspace/all/minarch/build/$(PLATFORM)/libsamplerate.* ./build/SYSTEM/$(PLATFORM)/lib/
 
@@ -125,7 +125,7 @@ ifneq (,$(filter $(PLATFORM),tg5040 tg5050 my355))
 	cp ./workspace/all/minarch/build/$(PLATFORM)/libchdr.so.* ./build/SYSTEM/$(PLATFORM)/lib/
 	cp ./workspace/all/minarch/build/$(PLATFORM)/libcrypto.so.* ./build/SYSTEM/$(PLATFORM)/lib/
 
-ifeq ($(PLATFORM), tg5040)
+ifneq (,$(filter $(PLATFORM),tg5040 v90s))
 	# liblz4 for Rewind support
 	cp -L ./workspace/all/minarch/build/$(PLATFORM)/liblz4.so.1 ./build/SYSTEM/$(PLATFORM)/lib/
 endif
