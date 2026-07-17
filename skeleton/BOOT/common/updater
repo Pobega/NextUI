@@ -7,6 +7,9 @@ MODEL=`cat /proc/device-tree/model 2> /dev/null`
 if echo "$MODEL" | grep -q "sun50iw9"; then
 	PLATFORM="h700" # Anbernic RG XX, Allwinner H700
 fi
+if echo "$MODEL" | grep -q "sun50iw10"; then
+	PLATFORM="v90s" # Powkiddy V90S, Allwinner A133P
+fi
 case $INFO in
 *"sun8i"*)
 	if [ -d /usr/miyoo ]; then

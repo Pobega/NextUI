@@ -9,7 +9,12 @@ endif
 HOST_WORKSPACE=$(shell pwd)/workspace
 GUEST_WORKSPACE=/root/workspace
 
+# v90s has no dedicated toolchain image: same SoC/arch as tg5040 (Allwinner
+# A133P, aarch64, glibc older than the target's), so it builds in that image.
 TOOLCHAIN_NAME=$(PLATFORM)
+ifeq ($(PLATFORM),v90s)
+TOOLCHAIN_NAME=tg5040
+endif
 
 GIT_IF_NECESSARY=toolchains/$(TOOLCHAIN_NAME)-toolchain
 INIT_IF_NECESSARY=toolchains/$(TOOLCHAIN_NAME)-toolchain/.build
