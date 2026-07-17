@@ -1,0 +1,16 @@
+$(PLATFORM):
+	# TF1 hook file, dragged onto the BATOCERA partition by the user
+	mkdir -p ./build/BASE/v90s
+	cp ./workspace/$@/boot/postshare.sh ./build/BASE/v90s/
+
+	# installer
+	cp ./workspace/$@/install/boot.sh ./build/BOOT/common/$@.sh
+	cp ./workspace/$@/install/update.sh ./build/SYSTEM/$@/bin/install.sh
+	mkdir -p ./build/SYSTEM/$@/dat
+	cp ./workspace/$@/boot/postshare.sh ./build/SYSTEM/$@/dat/
+	mkdir -p ./build/BOOT/common/$@/
+	cp ./workspace/$@/install/*.png ./build/BOOT/common/$@/
+	cp ./workspace/all/show2/build/$@/show2.elf ./build/BOOT/common/$@/
+	cp ./workspace/$@/other/unzip60/unzip ./build/BOOT/common/$@/
+	cp ./workspace/$@/other/evtest/evtest ./build/SYSTEM/$@/bin/
+	cp ./workspace/$@/other/jstest/jstest ./build/SYSTEM/$@/bin/
