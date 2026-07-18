@@ -15,13 +15,10 @@
 | ES shim handoff end-to-end: postshare self-bootstrap from MinUI.zip, updater detection, installer, launch loop | first boot on hardware (2026-07-18): install log clean, launch loop reached |
 | `fbgl` drives an SDL window (show2 splash rendered) | same first boot |
 | Stock rootfs lacks tinyalsa → ship `libtinyalsa.so.1` in `.system/v90s/lib` | first boot: nextui.elf exited 127 (`libtinyalsa.so.1` not found), crash-limit poweroff; fixed |
+| **Gate B closed: `fbgl` drives NextUI's fullscreen GLES window** — launcher UI renders | on-device (2026-07-18), second boot after the tinyalsa fix |
 
-## Pending first boot (in rough order of risk)
+## Pending (in rough order of risk)
 
-1. **`fbgl` accepts NextUI's fullscreen GLES window** — the one real
-   unknown left in the video chain (04); the splash proved plain-SDL
-   windows work, GLES still unproven. Everything downstream (shaders,
-   overlays) is proven on this GPU by tg5040.
 3. **Audio** — tinyalsa control names live (`digital volume`,
    `HpSpeaker Switch`), sample rate pick (48000 vs 44100), jack switching.
 4. **Cores** — try tg5040-built cores first (same arch/CPU); else build
