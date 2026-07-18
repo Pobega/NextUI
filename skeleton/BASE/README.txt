@@ -40,6 +40,10 @@ MIYOO FLIP
 
 Copy the "miyoo355" folder and "MinUI.zip" (without unzipping) to the root of the SD card. Put the SD card into the right slot (beneath the power button).
 
+POWKIDDY V90S
+
+The V90S boots entirely from TF1, so TF1 must contain the stock OS (flash the stock image if it no longer does). On a Linux PC, open TF1's "BATOCERA" partition (it is ext4, so Windows and macOS cannot see it), rename the existing "postshare.sh" to "postshare-stock.sh", then copy "postshare.sh" from this zip's "v90s" folder in its place. Copy "MinUI.zip" (without unzipping) to the root of a FAT32 card and put that card in TF2. With no TF2 card inserted the device boots stock, untouched. To uninstall, delete "postshare.sh" from TF1 and rename "postshare-stock.sh" back.
+
 ----------------------------------------
 Updating
 
