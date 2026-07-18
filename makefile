@@ -97,6 +97,10 @@ ifneq ($(PLATFORM), desktop)
 	cp ./workspace/all/gametime/build/$(PLATFORM)/gametime.elf ./build/EXTRAS/Tools/$(PLATFORM)/Game\ Tracker.pak/
 endif
 	cp ./workspace/$(PLATFORM)/libmsettings/libmsettings.so ./build/SYSTEM/$(PLATFORM)/lib
+ifeq ($(PLATFORM), v90s)
+	# stock Batocera rootfs ships no tinyalsa (libmsettings links it)
+	cp -L ./workspace/v90s/libmsettings/libtinyalsa.so.1 ./build/SYSTEM/$(PLATFORM)/lib
+endif
 	cp ./workspace/all/nextui/build/$(PLATFORM)/nextui.elf ./build/SYSTEM/$(PLATFORM)/bin/
 	cp ./workspace/all/minarch/build/$(PLATFORM)/minarch.elf ./build/SYSTEM/$(PLATFORM)/bin/
 	cp ./workspace/all/nextval/build/$(PLATFORM)/nextval.elf ./build/SYSTEM/$(PLATFORM)/bin/

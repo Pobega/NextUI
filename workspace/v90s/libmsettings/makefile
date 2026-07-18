@@ -21,6 +21,8 @@ build:
 	$(CC) -c -Werror -fpic "$(TARGET).c" $(CFLAGS) -Wl,--no-as-needed $(LDFLAGS)
 	$(CC) -c -Werror -fpic "../../all/common/displaycal.c" $(CFLAGS) -Wl,--no-as-needed $(LDFLAGS)
 	$(CC) -shared -o "lib$(TARGET).so" "$(TARGET).o" "displaycal.o" $(LDFLAGS)
+	# stock Batocera rootfs ships no tinyalsa — stage the toolchain's copy for .system/v90s/lib
+	cp -L "$(PREFIX)/lib/libtinyalsa.so.1" .
 	mkdir -p "$(PREFIX_LOCAL)/include"
 	mkdir -p "$(PREFIX_LOCAL)/lib"
 	cp "$(TARGET).h" "$(PREFIX_LOCAL)/include"
@@ -29,5 +31,6 @@ build:
 clean:
 	rm -f *.o
 	rm -f "lib$(TARGET).so"
+	rm -f libtinyalsa.so.1
 	rm -f $(PREFIX_LOCAL)/include/$(TARGET).h
 	rm -f $(PREFIX_LOCAL)/lib/lib$(TARGET).so
