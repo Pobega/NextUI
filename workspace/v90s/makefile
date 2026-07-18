@@ -19,7 +19,7 @@ REQUIRES_JSTEST=other/jstest
 REQUIRES_UNZIP60=other/unzip60
 REQUIRES_FILEMGR=other/NextCommander
 FILEMGR_PATCH=patches/NextCommander-v90s.patch
-FILEMGR_STAMP=.patched-v90s-v1
+FILEMGR_STAMP=.patched-v90s-v2
 
 all: readmes
 

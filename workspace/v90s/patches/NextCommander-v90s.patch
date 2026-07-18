@@ -47,6 +47,44 @@ index dbf0750..6fd9568 100644
  SDCARD_ROOT := /mnt/SDCARD
  NEXTUI_SYSTEM_PATH := $(SDCARD_ROOT)/.system
  
+diff --git a/src/main.cpp b/src/main.cpp
+index e4b2f39..f2df04b 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -103,20 +103,21 @@ int main(int argc, char *argv[])
+     }
+ 
+     // Check for joystick
+-    if (SDL_NumJoysticks() > 0) {
+-        // Open joystick
+-        Globals::g_joy = SDL_JoystickOpen(0);
+-
+-        if (Globals::g_joy) {
+-            printf("Opened Joystick 0\n");
+-            printf("Name: %s\n", SDL_JoystickNameForIndex(0));
+-            printf("Number of Axes: %d\n", SDL_JoystickNumAxes(Globals::g_joy));
+-            printf("Number of Buttons: %d\n", SDL_JoystickNumButtons(Globals::g_joy));
+-            printf("Number of Balls: %d\n", SDL_JoystickNumBalls(Globals::g_joy));
++    // Open every joystick, not just index 0: on some devices (e.g. the
++    // Powkiddy V90S) other input nodes enumerate as joysticks ahead of the
++    // built-in gamepad, and events carry per-device button numbers anyway.
++    for (int i = 0; i < SDL_NumJoysticks(); ++i) {
++        SDL_Joystick *joy = SDL_JoystickOpen(i);
++        if (joy) {
++            printf("Opened Joystick %d\n", i);
++            printf("Name: %s\n", SDL_JoystickNameForIndex(i));
++            printf("Number of Axes: %d\n", SDL_JoystickNumAxes(joy));
++            printf("Number of Buttons: %d\n", SDL_JoystickNumButtons(joy));
++            printf("Number of Balls: %d\n", SDL_JoystickNumBalls(joy));
++            if (Globals::g_joy == NULL) Globals::g_joy = joy;
+         } else {
+-            printf("Couldn't open Joystick 0\n");
++            printf("Couldn't open Joystick %d\n", i);
+         }
+-        
+     }
+ 
+     // Hide cursor before creating the output surface.
 diff --git a/src/screen.cpp b/src/screen.cpp
 index 43d31fa..5a5cb32 100644
 --- a/src/screen.cpp

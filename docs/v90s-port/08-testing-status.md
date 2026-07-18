@@ -16,26 +16,28 @@
 | `fbgl` drives an SDL window (show2 splash rendered) | same first boot |
 | Stock rootfs lacks tinyalsa → ship `libtinyalsa.so.1` in `.system/v90s/lib` | first boot: nextui.elf exited 127 (`libtinyalsa.so.1` not found), crash-limit poweroff; fixed |
 | **Gate B closed: `fbgl` drives NextUI's fullscreen GLES window** — launcher UI renders | on-device (2026-07-18), second boot after the tinyalsa fix |
+| Games run with sound: GBA (tg5040-built gpsp core), button mapping correct in menu and in game | on-device (2026-07-18) |
+| Audio + volume controls, brightness/settings UI, battery display | on-device (2026-07-18) |
+| Deep sleep broken as predicted: resume renders but backlight stays off and input fds die → `PLAT_supportsDeepSleep()` now returns 0 (soft sleep + 2-min poweroff) | on-device (2026-07-18) |
 
 ## Pending (in rough order of risk)
 
-3. **Audio** — tinyalsa control names live (`digital volume`,
-   `HpSpeaker Switch`), sample rate pick (48000 vs 44100), jack switching.
-4. **Cores** — try tg5040-built cores first (same arch/CPU); else build
-   with `platform=tg5040` aliasing per the roadmap.
-5. **Suspend** — `echo mem` resume reliability on this BSP kernel; fall
-   back to soft sleep (`PLAT_supportsDeepSleep() → 0`) if flaky.
-6. **Physical A/B/X/Y orientation** — verify with the Input pak; swap
-   `platform.h` codes if mirrored.
-7. **Panel refresh** — measure and correct `SCREEN_FPS`.
-8. **Rumble** — driver advertises FF; confirm whether a motor exists at
+1. **NextCommander (Files.pak)** — first test: app rendered but all
+   input dead. Suspected cause: it only opened SDL joystick index 0,
+   which on this device may not be the adc_gamepad (other event nodes
+   can enumerate as joysticks first). Patch v2 opens every joystick and
+   Files.pak now logs to `logs/commander.txt` — retest, and check the
+   log's joystick list if buttons are still dead (next suspect: the
+   ascending-keycode button-index assumption, 304→0 … 316→10).
+2. **Soft sleep** — verify the fallback: power button sleeps/wakes
+   instantly, 2 minutes asleep powers off cleanly (quicksave present).
+3. **Remaining cores** — GBA works; spot-check pcsx_rearmed, snes9x,
+   fceumm, picodrive; else build with `platform=tg5040` aliasing.
+4. **Panel refresh** — measure and correct `SCREEN_FPS`.
+5. **Rumble** — driver advertises FF; confirm whether a motor exists at
    all (currently no-op).
-9. **NextCommander (Files.pak)** — the patch assumes stock SDL2 assigns
-   adc_gamepad buttons joystick indices in ascending keycode order
-   (304→0 … 316→10) and delivers the keyboard-style dpad as SDLK arrows;
-   verify both on device.
-10. Battery curve sanity, charge detection, power-off/reboot paths,
-    volume-key repeat feel, 480p UI polish pass.
+6. Battery curve sanity over a full charge, charge detection,
+   power-off/reboot paths, volume-key repeat feel, 480p UI polish pass.
 
 ## Not applicable on this device
 
