@@ -498,9 +498,12 @@ void PLAT_powerOff(int reboot) {
 	exit(0);
 }
 
-// TODO(recon): verify `echo mem > /sys/power/state` resumes reliably on the
-// A133 BSP kernel; flip to 0 to fall back to NextUI's soft sleep if not.
-int PLAT_supportsDeepSleep(void) { return 1; }
+// Deep sleep (`echo mem`) is broken on this A133 BSP kernel: the device
+// resumes rendering but the backlight never re-enables and the pre-suspend
+// input fds go dead (verified on hardware 2026-07-18). Soft sleep instead:
+// screen off + CPU floor, and the shared PWR code powers off after two
+// minutes asleep (quicksave + auto-resume cover that path).
+int PLAT_supportsDeepSleep(void) { return 0; }
 
 // The V90S clamshell has no lid-close sensor (no SW_LID device, no PMIC
 // hallkey) — sleep/wake is power-button only.
