@@ -23,8 +23,12 @@ TF1's ext4 BATOCERA partition):
 
 1. chains `postshare-stock.sh` (preserves stock first-boot behavior);
 2. finds the NextUI card — stock has already auto-mounted TF2 under
-   `/media/*` by S12; falls back to `/userdata` (TF1's SHARE partition);
-   if no `.tmp_update/updater` found anywhere → `exit 0`, **pure stock boot**;
+   `/media/*` by S12; falls back to `/userdata` (TF1's SHARE partition).
+   On a fresh card holding only `MinUI.zip`, it first extracts
+   `.tmp_update/*` out of the zip with stock's `/usr/bin/unzip`
+   (self-bootstrap: "copy MinUI.zip to the card" is the whole install).
+   If no `.tmp_update/updater` found anywhere → `exit 0`, **pure stock
+   boot**;
 3. bind-mounts the card to `/mnt/SDCARD` (so every shared-code path
    convention holds);
 4. overwrites `/usr/bin/emulationstation-standalone` with a two-line shim
