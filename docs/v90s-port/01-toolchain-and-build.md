@@ -39,8 +39,10 @@ usable), the V90S stock OS ships SDL2 **2.30.12 + SDL2_image 2.8.5 +
 SDL2_ttf 2.24.0**. So v90s follows the tg5040 pattern instead: binaries
 link against the container's SDL2 dev files and run against stock's
 libraries at runtime (`SDL_VIDEODRIVER=fbgl`, see 04). There is no
-`other/sdl2` build in `workspace/v90s/makefile` — its `early:` target only
-builds evtest, jstest, and unzip60.
+`other/sdl2` build in `workspace/v90s/makefile` — its `early:` target builds
+evtest, jstest, unzip60, and NextCommander (patched for v90s via
+`patches/NextCommander-v90s.patch`: 640×480 at PPU 2, adc_gamepad joystick
+button indices in ascending keycode order, dpad as SDLK arrows).
 
 ## Platform filters to know about
 

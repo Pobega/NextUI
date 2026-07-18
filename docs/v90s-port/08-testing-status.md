@@ -32,8 +32,12 @@
 7. **Panel refresh** — measure and correct `SCREEN_FPS`.
 8. **Rumble** — driver advertises FF; confirm whether a motor exists at
    all (currently no-op).
-9. Battery curve sanity, charge detection, power-off/reboot paths,
-   volume-key repeat feel, 480p UI polish pass.
+9. **NextCommander (Files.pak)** — the patch assumes stock SDL2 assigns
+   adc_gamepad buttons joystick indices in ascending keycode order
+   (304→0 … 316→10) and delivers the keyboard-style dpad as SDLK arrows;
+   verify both on device.
+10. Battery curve sanity, charge detection, power-off/reboot paths,
+    volume-key repeat feel, 480p UI polish pass.
 
 ## Not applicable on this device
 

@@ -3,6 +3,6 @@
 cd $(dirname "$0")
 
 HOME="$SDCARD_PATH"
-CFG="h700.cfg"
+CFG="v90s.cfg"
 
 ./NextCommander --config $CFG
