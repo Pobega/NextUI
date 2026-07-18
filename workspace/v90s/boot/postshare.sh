@@ -14,13 +14,22 @@
 [ -e /boot/postshare-stock.sh ] && sh /boot/postshare-stock.sh "$1"
 [ "$1" = "start" ] || exit 0
 
-# Find the NextUI card: stock auto-mounts TF2's first partition under /media
+# Find the NextUI card: stock auto-mounts TF2's first partition under /media,
+# with TF1's own SHARE partition (/userdata) as the fallback
 SDCARD=
-for D in /media/*; do
+for D in /media/* /userdata; do
 	[ -f "$D/.tmp_update/updater" ] && SDCARD="$D" && break
 done
-# fall back to TF1's own SHARE partition
-[ -z "$SDCARD" ] && [ -f /userdata/.tmp_update/updater ] && SDCARD=/userdata
+# first install: a card holding only MinUI.zip — pull the bootstrap out of it
+# with stock's unzip so "copy MinUI.zip to the card" is the whole install
+if [ -z "$SDCARD" ]; then
+	for D in /media/* /userdata; do
+		if [ -f "$D/MinUI.zip" ]; then
+			unzip -o "$D/MinUI.zip" '.tmp_update/*' -d "$D" >/dev/null 2>&1
+			[ -f "$D/.tmp_update/updater" ] && SDCARD="$D" && break
+		fi
+	done
+fi
 [ -z "$SDCARD" ] && exit 0
 
 # shared code and scripts all assume /mnt/SDCARD
