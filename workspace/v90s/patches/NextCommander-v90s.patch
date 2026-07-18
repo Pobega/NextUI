@@ -109,7 +109,7 @@ index 43d31fa..5a5cb32 100644
          SDL_Log("Failed to create window: %s", SDL_GetError());
          return 1;
 diff --git a/src/window.cpp b/src/window.cpp
-index d48c309..bcf2531 100644
+index d48c309..dbf5dcb 100644
 --- a/src/window.cpp
 +++ b/src/window.cpp
 @@ -62,9 +62,18 @@ int CWindow::execute()
@@ -131,3 +131,30 @@ index d48c309..bcf2531 100644
          // Handle key press
          while (SDL_PollEvent(&event))
          {
+@@ -93,7 +102,7 @@ int CWindow::execute()
+                     break;
+ #ifndef IGNORE_KEYDOWN
+                 case SDL_KEYDOWN: {
+-                    //printf("key:%d\n",event.button.button); fflush(stdout);
++                    printf("key:%d\n",event.key.keysym.sym); fflush(stdout);
+                     SDL_utils::setMouseCursorEnabled(false);
+                     if (handleZoomTrigger(event)) {
+                         l_render = true;
+@@ -105,7 +114,7 @@ int CWindow::execute()
+                 }
+ #endif
+                 case SDL_JOYBUTTONDOWN: {
+-                    //printf("joy:%d\n",event.jbutton.button); fflush(stdout);
++                    printf("joy:%d\n",event.jbutton.button); fflush(stdout);
+                     SDL_utils::setMouseCursorEnabled(false);
+                     SDL_Event key_event;
+                     key_event.key.keysym.sym = event.jbutton.button == CMDR_KEY_MENU ? CMDR_KEY_SYSTEM : event.jbutton.button;
+@@ -114,7 +123,7 @@ int CWindow::execute()
+                     break;
+                 }
+                 case SDL_JOYHATMOTION: {
+-                    //printf("hat:%d\n",event.jhat.value); fflush(stdout);
++                    printf("hat:%d\n",event.jhat.value); fflush(stdout);
+                     SDL_Event hat_event;
+                     hat_event.key.keysym.sym = 0;
+                     if (event.jhat.value==SDL_HAT_UP) hat_event.key.keysym.sym = CMDR_KEY_UP;
