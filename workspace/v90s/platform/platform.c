@@ -467,9 +467,27 @@ void PLAT_getBatteryStatusFine(int *is_charging, int *charge)
 	}
 }
 
+// sunxi disp2: fbdev blank powers the LCD (and its backlight) down through
+// the panel driver, and DISP_LCD_SET_BRIGHTNESS alone only programs the PWM
+// level — it does not re-enable a disabled backlight. Without the explicit
+// enable ioctl the panel keeps rendering into darkness after wake.
+#define DISP_LCD_BACKLIGHT_ENABLE  0x104
+#define DISP_LCD_BACKLIGHT_DISABLE 0x105
+static void disp_setBacklightPower(int enable) {
+	int fd = open("/dev/disp", O_RDWR);
+	if (fd >= 0) {
+		unsigned long param[4] = {0, 0, 0, 0};
+		ioctl(fd, enable ? DISP_LCD_BACKLIGHT_ENABLE : DISP_LCD_BACKLIGHT_DISABLE, &param);
+		close(fd);
+	}
+	// belt and suspenders: the standard backlight class power knob
+	putInt("/sys/class/backlight/sunxi_backlight/bl_power", enable ? 0 : 4);
+}
+
 void PLAT_enableBacklight(int enable) {
 	if (enable) {
 		putInt("/sys/class/graphics/fb0/blank", 0);
+		disp_setBacklightPower(1);
 		SetBrightness(GetBrightness());
 	}
 	else {
@@ -498,12 +516,14 @@ void PLAT_powerOff(int reboot) {
 	exit(0);
 }
 
-// Deep sleep (`echo mem`) is broken on this A133 BSP kernel: the device
-// resumes rendering but the backlight never re-enables and the pre-suspend
-// input fds go dead (verified on hardware 2026-07-18). Soft sleep instead:
-// screen off + CPU floor, and the shared PWR code powers off after two
-// minutes asleep (quicksave + auto-resume cover that path).
-int PLAT_supportsDeepSleep(void) { return 0; }
+// Deep sleep (`echo mem`) looked broken on first hardware test (resume with
+// dead backlight + dead input), but that run was confounded: stock's
+// battery-saver daemon was still alive and re-suspending the device on input
+// inactivity right after our wake. With the stock idle daemons neutered in
+// postshare.sh, deep sleep is back on trial. If the corpse state returns
+// with the daemons confirmed dead, flip this to 0 (soft sleep + the shared
+// PWR code's 2-minute poweroff escalation, covered by quicksave/auto-resume).
+int PLAT_supportsDeepSleep(void) { return 1; }
 
 // The V90S clamshell has no lid-close sensor (no SW_LID device, no PMIC
 // hallkey) — sleep/wake is power-button only.

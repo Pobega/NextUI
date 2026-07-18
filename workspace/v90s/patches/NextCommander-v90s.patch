@@ -109,7 +109,7 @@ index 43d31fa..5a5cb32 100644
          SDL_Log("Failed to create window: %s", SDL_GetError());
          return 1;
 diff --git a/src/window.cpp b/src/window.cpp
-index d48c309..dbf5dcb 100644
+index d48c309..9623d86 100644
 --- a/src/window.cpp
 +++ b/src/window.cpp
 @@ -62,9 +62,18 @@ int CWindow::execute()
@@ -140,16 +140,24 @@ index d48c309..dbf5dcb 100644
                      SDL_utils::setMouseCursorEnabled(false);
                      if (handleZoomTrigger(event)) {
                          l_render = true;
-@@ -105,7 +114,7 @@ int CWindow::execute()
+@@ -104,8 +113,15 @@ int CWindow::execute()
+                     break;
                  }
  #endif
++                case SDL_JOYDEVICEADDED:
++                    // Some devices enumerate joysticks after SDL_Init's
++                    // initial scan; open them as they appear.
++                    SDL_JoystickOpen(event.jdevice.which);
++                    printf("joyadded:%d %s\n", event.jdevice.which,
++                        SDL_JoystickNameForIndex(event.jdevice.which)); fflush(stdout);
++                    break;
                  case SDL_JOYBUTTONDOWN: {
 -                    //printf("joy:%d\n",event.jbutton.button); fflush(stdout);
 +                    printf("joy:%d\n",event.jbutton.button); fflush(stdout);
                      SDL_utils::setMouseCursorEnabled(false);
                      SDL_Event key_event;
                      key_event.key.keysym.sym = event.jbutton.button == CMDR_KEY_MENU ? CMDR_KEY_SYSTEM : event.jbutton.button;
-@@ -114,7 +123,7 @@ int CWindow::execute()
+@@ -114,7 +130,7 @@ int CWindow::execute()
                      break;
                  }
                  case SDL_JOYHATMOTION: {

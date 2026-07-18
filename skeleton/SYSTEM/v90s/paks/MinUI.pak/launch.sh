@@ -31,8 +31,10 @@ export LD_LIBRARY_PATH="$SYSTEM_PATH/lib:/usr/lib:/lib:$LD_LIBRARY_PATH"
 # stock SDL2's custom EGL-framebuffer video driver (PowerVR NULL WSEGL)
 export SDL_VIDEODRIVER="fbgl"
 export SDL_AUDIODRIVER="alsa"
-export SDL_JOYSTICK_DISABLE_UDEV=1
-export SDL_HIDAPI_JOYSTICK_DISABLE_UDEV=1
+# Do NOT set SDL_JOYSTICK_DISABLE_UDEV here (h700 habit): with udev disabled,
+# stock SDL falls back to an mtime/inotify /dev/input scan that races boot
+# and can miss the adc_gamepad entirely (SDL_NumJoysticks()==0). udevd runs
+# on stock and its enumeration is deterministic — stock ES relies on it.
 
 for egl_path in /usr/lib/libEGL.so.1 /usr/lib/libEGL.so; do
 	if [ -e "$egl_path" ]; then
