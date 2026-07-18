@@ -67,6 +67,23 @@ mkdir -p "$BIOS_PATH" "$ROMS_PATH" "$SAVES_PATH" "$CHEATS_PATH"
 mkdir -p "$USERDATA_PATH" "$LOGS_PATH" "$HOOKS_PATH" "$SHARED_USERDATA_PATH/.minui"
 echo "launch: starting $(date)" > "$LAUNCH_LOG"
 
+# Stock daemons that fight NextUI: triggerhappy (multimedia keys), hotkeygen
+# (SELECT-combo hotkeys), battery-saver (dims then suspends/powers off on
+# input inactivity). postshare.sh prevents them from ever starting; this
+# covers boots where TF1 still carries an older hook. The delayed sweep
+# catches any that init started after the overwrite.
+stop_stock_daemons() {
+	for SVC in S50triggerhappy S90hotkeygen S96battery-saver-daemon; do
+		printf '#!/bin/sh\nexit 0\n' > "/etc/init.d/$SVC" 2>/dev/null || true
+	done
+	pkill -f battery-saver 2>/dev/null
+	pkill -f hotkeygen 2>/dev/null
+	pkill thd 2>/dev/null
+	return 0
+}
+stop_stock_daemons
+( sleep 20 && stop_stock_daemons ) &
+
 export IS_NEXT="yes"
 log_runtime_state
 

@@ -43,4 +43,16 @@ cat > /usr/bin/emulationstation-standalone <<'EOF'
 exec sh /mnt/SDCARD/.tmp_update/updater
 EOF
 chmod +x /usr/bin/emulationstation-standalone
+
+# Neuter stock daemons that fight NextUI's own input/power handling. We run
+# at S12, before any of them start, and the rootfs upper is tmpfs so stock
+# on disk is untouched:
+# - S50 triggerhappy: stock multimedia-key daemon (keymon handles volume)
+# - S90 hotkeygen: synthesizes hotkey events from SELECT combos, which
+#   NextUI uses as a normal button
+# - S96 battery-saver: input-inactivity daemon that dims, then suspends or
+#   powers off the device behind NextUI's back (defaults: dim + suspend)
+for SVC in S50triggerhappy S90hotkeygen S96battery-saver-daemon; do
+	printf '#!/bin/sh\nexit 0\n' > "/etc/init.d/$SVC"
+done
 exit 0
