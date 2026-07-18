@@ -1,5 +1,16 @@
 # 08 — Testing Status
 
+> **Port status: shelved (2026-07-18).** Development stopped after four
+> on-device test rounds. The core port works — launcher, games, audio,
+> input all verified on hardware — but the stock-splice TF1 install story
+> (ext4 offset-mounts, renaming a stock file) was judged not viable for
+> release. The identified path forward is rebasing on **official Knulli**
+> (see the note at the end of [02](02-boot-and-installer.md)): its
+> `powkiddy-v90s` board is upstream, its boot partition is FAT32, and it
+> ships no `postshare.sh`, making the hook purely additive. The round-4
+> fixes below (backlight-enable ioctl on wake, udev joystick enumeration)
+> are committed and packaged but **never tested on hardware**.
+
 ## Verified
 
 | Item | How |
@@ -18,7 +29,9 @@
 | **Gate B closed: `fbgl` drives NextUI's fullscreen GLES window** — launcher UI renders | on-device (2026-07-18), second boot after the tinyalsa fix |
 | Games run with sound: GBA (tg5040-built gpsp core), button mapping correct in menu and in game | on-device (2026-07-18) |
 | Audio + volume controls, brightness/settings UI, battery display | on-device (2026-07-18) |
-| Deep sleep broken as predicted: resume renders but backlight stays off and input fds die → `PLAT_supportsDeepSleep()` now returns 0 (soft sleep + 2-min poweroff) | on-device (2026-07-18) |
+| Deep sleep broken as predicted: resume renders but backlight stays off and input fds die → `PLAT_supportsDeepSleep()` now returns 0 (soft sleep + 2-min poweroff) | on-device (2026-07-18) — **later re-attributed**: see round-4 row below |
+| Stock daemons survive the hijack and fight NextUI: battery-saver (dims then suspends/powers off on input inactivity), hotkeygen (SELECT-combo actions), triggerhappy. Neutered volatilely (tmpfs init-script overwrite) from postshare + launch.sh | round-3 logs: `batocera hotkeys` uinput device, abrupt unsynced poweroffs |
+| Round-4 root causes (fixed in code, **untested on device**): (a) wake-corpse was ours — fb0 blank powers the backlight down via the panel driver and `DISP_LCD_SET_BRIGHTNESS` never re-enables it; wake now calls `DISP_LCD_BACKLIGHT_ENABLE` + `bl_power`. Deep sleep re-enabled for retest. (b) Files.pak deaf input: `SDL_JOYSTICK_DISABLE_UDEV=1` (h700 habit) forces stock SDL onto an mtime/inotify fallback scan that races boot → `SDL_NumJoysticks()==0`; env removed, NextCommander patch v4 opens all joysticks + handles hotplug | commander.txt (SDLK_POWER flowed, zero joysticks), SDL 2.30.12 source |
 
 ## Pending (in rough order of risk)
 

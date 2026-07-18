@@ -75,3 +75,32 @@ so *stock* ES error-loops without a specially-prepared card. Irrelevant to
 NextUI (we intercept before ES), but useful to know when testing the
 stock-fallback path: a "can't find game" reboot loop is stock's normal
 no-roms behavior, not a hijack failure.
+
+## Post-mortem: the install story, and the Knulli path not taken
+
+The hijack itself proved sound on hardware — hook, shim, installer,
+self-bootstrap from MinUI.zip all worked. What killed the release story is
+the **stock splice's** packaging of it:
+
+- the splice ships its own `/boot/postshare.sh`, forcing the
+  rename-and-chain dance (upstream Batocera ships none — the hook is a
+  sanctioned, empty-by-default user extension point);
+- the splice formats `/boot` as **ext4** on a GPT that desktop Linux calls
+  corrupt, so installing one file requires a Linux PC and offset-mounts
+  (see 00) — not shippable to end users;
+- the splice's userspace keeps fighting the frontend (battery-saver,
+  hotkeygen, triggerhappy — see 08), requiring volatile neutering.
+
+**The identified fix (verified in the Knulli source tree, never executed):
+rebase the supported TF1 on official Knulli.**
+`board/batocera/allwinner/a133/powkiddy-v90s/` is an upstream board; its
+`genimage.cfg` builds the boot partition as **FAT32 (label `BATOCERA`)**;
+no `postshare.sh` ships in the image. On that base the install story
+becomes: flash the Knulli release to TF1 with any imaging tool, drag
+`postshare.sh` onto the FAT32 drive that appears, put NextUI on TF2.
+Purely additive, uninstall = delete one file, no OS requirements. All
+boot scripts in this port were written to run unchanged on both bases
+(the `postshare-stock.sh` chain is conditional and no-ops on Knulli).
+Remaining work for that path: one recon pass under Knulli (keycodes,
+mixer names, disp paths may differ from the splice), then retest the
+round-4 fixes (08).
