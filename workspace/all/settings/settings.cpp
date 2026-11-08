@@ -242,7 +242,8 @@ namespace {
             Unknown,
             Trimui,
             Miyoo,
-            Anbernic
+            Anbernic,
+            Powkiddy
         };
 
         enum Model {
@@ -262,7 +263,8 @@ namespace {
             RG35XXSP,
             RG35XXPRO,
             RG28XX,
-            RGCubeXX
+            RGCubeXX,
+            V90S
         };
 
         enum Platform {
@@ -270,7 +272,8 @@ namespace {
             tg5040,
             tg5050,
             my355,
-            h700
+            h700,
+            v90s
         };
 
         DeviceInfo() {
@@ -340,7 +343,16 @@ namespace {
                     m_vendor = Anbernic;
                     m_model = RGCubeXX;
                     m_platform = h700;
+                } else if(exactMatch("v90s", device)) {
+                    m_vendor = Powkiddy;
+                    m_model = V90S;
+                    m_platform = v90s;
                 }
+            }
+            if (m_platform == UnknownPlatform && exactMatch("v90s", PLATFORM)) {
+                m_vendor = Powkiddy;
+                m_model = V90S;
+                m_platform = v90s;
             }
         }
 
@@ -349,7 +361,7 @@ namespace {
         Platform getPlatform() const { return m_platform; }
 
         bool hasColorTemperature() const {
-            return m_platform == tg5040 || m_platform == h700;
+            return m_platform == tg5040 || m_platform == h700 || m_platform == v90s;
         }
 
         // the H700 disp driver doesn't support the enhance_* sysfs nodes,
@@ -363,7 +375,7 @@ namespace {
         }
 
         bool hasDisplayCal() const {
-            return m_platform == tg5040 || m_platform == h700;
+            return m_platform == tg5040 || m_platform == h700 || m_platform == v90s;
         }
 
         bool hasActiveCooling() const {
@@ -381,7 +393,7 @@ namespace {
         }
 
         bool hasWifi() const {
-            return m_platform == tg5050 || m_platform == tg5040 || m_platform == my355 || m_platform == h700;
+            return m_platform == tg5050 || m_platform == tg5040 || m_platform == my355 || m_platform == h700 || m_platform == v90s;
         }
 
         bool hasBluetooth() const {
@@ -709,7 +721,7 @@ int main(int argc, char *argv[])
             );
         }
 
-        if(deviceInfo.getPlatform() == DeviceInfo::tg5040 || deviceInfo.getPlatform() == DeviceInfo::h700)
+        if(deviceInfo.getPlatform() == DeviceInfo::tg5040 || deviceInfo.getPlatform() == DeviceInfo::h700 || deviceInfo.getPlatform() == DeviceInfo::v90s)
         {
             systemItems.push_back(
                 new MenuItem{ListItemType::Generic, "Keep awake over USB", "Prevent screen-off and sleep while connected to a\ncomputer as a USB device (not just charging).", {false, true}, on_off,

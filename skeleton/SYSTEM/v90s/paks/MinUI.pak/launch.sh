@@ -2,6 +2,7 @@
 # MinUI.pak for Powkiddy V90S / Allwinner A133P (Batocera-splice stock OS)
 
 export PLATFORM="v90s"
+export DEVICE="v90s"
 SDCARD_PATH="/mnt/SDCARD"
 
 # /boot/postshare.sh normally bind-mounts the NextUI card here already;
@@ -98,6 +99,14 @@ batmon.elf > "$LOGS_PATH/batmon.txt" 2>&1 &
 
 rm -f "$USERDATA_PATH/.asoundrc"
 audiomon.elf > "$LOGS_PATH/audiomon.txt" 2>&1 &
+
+# wifi handling
+wifion=$(nextval.elf wifi | sed -n 's/.*"wifi": \([0-9]*\).*/\1/p')
+if [ "$wifion" = "1" ]; then
+	sh "$SYSTEM_PATH/etc/wifi/wifi_init.sh" start > /dev/null 2>&1 &
+else
+	sh "$SYSTEM_PATH/etc/wifi/wifi_init.sh" stop > /dev/null 2>&1 &
+fi
 
 AUTO_PATH="$USERDATA_PATH/auto.sh"
 if [ -f "$AUTO_PATH" ]; then

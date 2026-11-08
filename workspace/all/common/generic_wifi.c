@@ -121,7 +121,7 @@ bool PLAT_wifiEnabled() {
 void PLAT_wifiEnable(bool on) {
 	if (on) {
 		wifilog("turning wifi on...\n");
-		system(SYSTEM_PATH "/etc/wifi/wifi_init.sh start > /dev/null 2>&1");
+		system("sh \"" SYSTEM_PATH "/etc/wifi/wifi_init.sh\" start > /dev/null 2>&1");
 		// Keep config in sync
 		CFG_setWifi(on);
 	}
@@ -129,7 +129,7 @@ void PLAT_wifiEnable(bool on) {
 		wifilog("turning wifi off...\n");
 		// Keep config in sync
 		CFG_setWifi(on);
-		system(SYSTEM_PATH "/etc/wifi/wifi_init.sh stop > /dev/null 2>&1");
+		system("sh \"" SYSTEM_PATH "/etc/wifi/wifi_init.sh\" stop > /dev/null 2>&1");
 	}
 }
 
@@ -561,9 +561,11 @@ void PLAT_wifiConnectPass(const char *ssid, WifiSecurityType sec, const char* pa
 		wifilog("Using existing network configuration...\n");
 	}
 	
-	// Enable network
+	// Enable and select network
 	wifilog("Enabling network %d...\n", network_id);
 	snprintf(cmd, sizeof(cmd), "%s enable_network %d 2>/dev/null", WPA_CLI_CMD, network_id);
+	system(cmd);
+	snprintf(cmd, sizeof(cmd), "%s select_network %d 2>/dev/null", WPA_CLI_CMD, network_id);
 	system(cmd);
 	snprintf(cmd, sizeof(cmd), "%s reassociate 2>/dev/null", WPA_CLI_CMD);
 	system(cmd);
@@ -572,12 +574,18 @@ void PLAT_wifiConnectPass(const char *ssid, WifiSecurityType sec, const char* pa
 	wifilog("Saving network configuration...\n");
 	system(WPA_CLI_CMD " save_config 2>/dev/null");
 	
-	// Wait for connection
-	wifilog("Waiting for connection (up to 5 seconds)...\n");
-	for (int i = 0; i < 10; i++) {
+	// Wait for connection (up to 10 seconds) and DHCP lease (up to 3 seconds)
+	wifilog("Waiting for connection (up to 10 seconds)...\n");
+	for (int i = 0; i < 20; i++) {
 		usleep(500000);
 		if (PLAT_wifiConnected()) {
-			wifilog("PLAT_wifiConnectPass: connected successfully after %d attempts\n", i + 1);
+			wifilog("PLAT_wifiConnectPass: connected successfully after %d attempts, waiting for IP...\n", i + 1);
+			char ip[32] = {0};
+			for (int j = 0; j < 6; j++) {
+				if (wifi_get_ip(ip, sizeof(ip)) && ip[0] != '\0')
+					break;
+				usleep(500000);
+			}
 			return;
 		}
 	}

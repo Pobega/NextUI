@@ -110,6 +110,16 @@
 #define JOY_MINUS		JOY_NA
 
 ///////////////////////////////
+// USER-ASSIGNABLE BUTTONS
+// V90S has no dedicated FN1/FN2/HOME buttons for pak launch actions.
+#define BTN_FN1			BTN_NONE
+#define BTN_FN2			BTN_NONE
+#define BTN_FN3			BTN_NONE
+#define BTN_FN1_NAME	""
+#define BTN_FN2_NAME	""
+#define BTN_FN3_NAME	""
+
+///////////////////////////////
 
 // no analog sticks
 #define AXIS_L2			AXIS_NA
@@ -145,7 +155,7 @@
 
 #define MAIN_ROW_COUNT 6
 #define QUICK_SWITCHER_COUNT 3
-#define PADDING 5
+#define PADDING 10
 
 ///////////////////////////////
 

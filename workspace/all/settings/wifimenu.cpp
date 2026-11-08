@@ -200,7 +200,9 @@ void Menu::updater()
             selectionDirty = false;        
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(pollSecs));
+        bool wasEnabled = WIFI_enabled();
+        for (int s = 0; s < pollSecs * 4 && !quit && !globalQuit && WIFI_enabled() == wasEnabled; ++s)
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 }
 
