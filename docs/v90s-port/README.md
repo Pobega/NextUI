@@ -1,23 +1,12 @@
 # NextUI on the Powkiddy V90S (`v90s` platform)
 
-A port of NextUI to the Powkiddy V90S clamshell, following the approach of
-the [h700 port](https://github.com/pvaibhav/NextUI) (Anbernic RG XX): the
-stock OS stays on disk untouched, NextUI hijacks the boot via a sanctioned
-hook and lives on its own SD card.
+> [!IMPORTANT]
+> **Provided As-Is:** `NextUI-v90s` and [`BaseOS-v90s`](https://github.com/Pobega/BaseOS-v90s) are provided **as-is**. They are **not** intended to be fully maintained forks of [NextUI](https://github.com/LoveRetro/NextUI) or [BaseOS](https://github.com/pvaibhav/BaseOS), but rather a standalone port meant to give Powkiddy V90S users a good experience. There may be bugs or missing features—feel free to report issues, though it is not extremely likely that all of them will be fixed.
 
-**Status: shelved (2026-07-18) after four on-device test rounds.**
-The port itself works on hardware: boot hijack, installer, launcher
-(fullscreen GLES through stock's `fbgl` SDL driver), games with sound
-(tg5040-built cores run as-is), buttons, volume, brightness, battery. What
-stopped the effort is the stock splice's install story — its ext4 `/boot`
-on a nonstandard GPT means installing the one hook file needs a Linux PC
-and offset-mounts, judged not viable for release. The identified (verified,
-unexecuted) path forward is rebasing TF1 on **official Knulli**, where the
-same hook is a one-file drop onto a FAT32 partition — see the post-mortem
-in [02](02-boot-and-installer.md) and the final state in
-[08](08-testing-status.md). Every hardware constant in the port comes from
-either offline dissection of the stock OS image or an on-device recon dump —
-not guesswork.
+A port of NextUI to the Powkiddy V90S clamshell (`sun50iw10p1` / Allwinner A133P), paired with **[`BaseOS-v90s`](https://github.com/Pobega/BaseOS-v90s)**.
+
+**Status: Working & released on [`BaseOS-v90s`](https://github.com/Pobega/BaseOS-v90s).**
+Initially tested using a stock Batocera/PlumOS `postshare.sh` boot hijack (recorded in the historical design docs below), the V90S port now runs natively on **[`BaseOS-v90s`](https://github.com/Pobega/BaseOS-v90s)**—a minimal BusyBox-based OS on TF1 that boots the V90S in ~5.9 seconds (`~3.6s` before Linux + `~2.3s` Linux to NextUI) and automatically installs `MinUI.zip` and `*.pakz` from either TF1's `BASEOS` partition (single-card setup) or a FAT32/exFAT TF2 card (dual-card setup). Every hardware constant in the port comes from either offline dissection of the stock OS image or an on-device recon dump — not guesswork.
 
 | Doc | Contents |
 |---|---|
