@@ -735,12 +735,23 @@ static void drawDebugHud(const void* data, unsigned width, unsigned height, size
 	}
 }
 
+static void apply_scaler_and_clear(int width, int height, int pitch) {
+	selectScaler(width, height, pitch);
+	GFX_clearShaders();
+	GFX_clearAll();
+	if (!shader_reset_suppressed) {
+		GFX_resetShaders();
+	} else {
+		shader_reset_suppressed = 0; // consume suppression after one use
+	}
+}
+
+static uint32_t last_flip_time = 0;
+
 static void video_refresh_callback_main(const void *data, unsigned width, unsigned height, size_t pitch) {
 	// return;
 
 	Special_render();
-	
-	static uint32_t last_flip_time = 0;
 	
 	// 10 seems to be the sweet spot that allows 2x in NES and SNES and 8x in GB at 60fps
 	// 14 will let GB hit 10x but NES and SNES will drop to 1.5x at 30fps (not sure why)
@@ -763,13 +774,7 @@ static void video_refresh_callback_main(const void *data, unsigned width, unsign
 	// if source has changed size (or forced by dst_p==0)
 	// eg. true src + cropped src + fixed dst + cropped dst
 	if (renderer.dst_p==0 || width!=renderer.true_w || height!=renderer.true_h) {
-		selectScaler(width, height, pitch);
-		GFX_clearAll();
-		if (!shader_reset_suppressed) {
-			GFX_resetShaders();
-		} else {
-			shader_reset_suppressed = 0; // consume suppression after one use
-		}
+		apply_scaler_and_clear(width, height, pitch);
 	}
 	
 	// debug
@@ -935,7 +940,34 @@ static void convert_rgb565_to_rgba(const void* src, uint32_t* dst, unsigned widt
 	}
 }
 
+static void video_refresh_hw(const void *data, unsigned width, unsigned height) {
+	if (!HWR_submitFrame(data, &width, &height)) return;
+	if (quit || (fast_forward && (SDL_GetTicks() - last_flip_time < 30))) return;
+
+	static double last_aspect = 0;
+
+	if (width > 0 && height > 0 && (renderer.dst_p == 0 || (int)width != renderer.true_w || (int)height != renderer.true_h || core.aspect_ratio != last_aspect)) {
+		last_aspect = core.aspect_ratio;
+		apply_scaler_and_clear((int)width, (int)height, (int)width * 4);
+	}
+
+	renderer.src = NULL;
+	renderer.dst = screen->pixels;
+	GFX_blitRenderer(&renderer);
+	screen_flip(screen);
+	last_flip_time = SDL_GetTicks();
+}
+
 void video_refresh_callback(const void* data, unsigned width, unsigned height, size_t pitch) {
+	if (HWR_active()) {
+		if (data == NULL || data == RETRO_HW_FRAME_BUFFER_VALID) {
+			video_refresh_hw(data, width, height);
+			return;
+		}
+		HWR_prepareSoftwareFrame();
+	}
+	if (data == RETRO_HW_FRAME_BUFFER_VALID) return;
+
 	// Log NEON availability once on first call
 	static int neon_logged = 0;
 	if (!neon_logged) {

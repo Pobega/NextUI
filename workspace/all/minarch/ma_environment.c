@@ -14,12 +14,194 @@ static bool set_rumble_state(unsigned port, enum retro_rumble_effect effect, uin
 	return 1;
 }
 
+#ifndef RETRO_HW_FRAME_BUFFER_VALID
+#define RETRO_HW_FRAME_BUFFER_VALID ((void*)-1)
+#endif
+
 #ifndef RETRO_SIMD_NEON
 #define RETRO_SIMD_NEON (1 << 3)
 #endif
 #ifndef RETRO_SIMD_ASIMD
 #define RETRO_SIMD_ASIMD (1 << 12)
 #endif
+
+static struct {
+	struct retro_hw_render_callback cb;
+	int requested;
+	int active;
+	int fbo_w;
+	int fbo_h;
+	int last_w;
+	int last_h;
+} hwr_state = {0};
+
+static uintptr_t HWR_getCurrentFramebuffer(void) {
+	return PLAT_HWR_getFramebuffer();
+}
+
+static retro_proc_address_t HWR_getProcAddress(const char *sym) {
+	return (retro_proc_address_t)PLAT_HWR_getProcAddress(sym);
+}
+
+bool HWR_setCallback(struct retro_hw_render_callback *cb) {
+	if (!cb) return false;
+
+	if (cb->context_type == RETRO_HW_CONTEXT_NONE) {
+		HWR_contextDestroy();
+		return true;
+	}
+
+#if defined(USE_GLES)
+	if (cb->context_type == RETRO_HW_CONTEXT_OPENGLES3 && cb->version_major == 0 && cb->version_minor == 0) {
+		cb->version_major = 3;
+		cb->version_minor = 0;
+	}
+
+	switch (cb->context_type) {
+	case RETRO_HW_CONTEXT_OPENGLES2:
+	case RETRO_HW_CONTEXT_OPENGLES3:
+		break;
+	case RETRO_HW_CONTEXT_OPENGLES_VERSION:
+		if (cb->version_major > 3 || (cb->version_major == 3 && cb->version_minor > 2)) {
+			LOG_error("Unsupported GLES version requested: %u.%u\n", cb->version_major, cb->version_minor);
+			return false;
+		}
+		break;
+	default:
+		LOG_error("Unsupported HW render context type: %d\n", cb->context_type);
+		return false;
+	}
+#else
+	if (cb->context_type != RETRO_HW_CONTEXT_OPENGL_CORE ||
+	    cb->version_major > 4 || (cb->version_major == 4 && cb->version_minor > 1)) {
+		LOG_error("Unsupported HW render context type: %d (%u.%u)\n",
+		          cb->context_type, cb->version_major, cb->version_minor);
+		return false;
+	}
+#endif
+
+	cb->get_current_framebuffer = HWR_getCurrentFramebuffer;
+	cb->get_proc_address = HWR_getProcAddress;
+	hwr_state.cb = *cb;
+	hwr_state.requested = 1;
+	return true;
+}
+
+int HWR_active(void) {
+	return hwr_state.active;
+}
+
+int HWR_contextFailed(void) {
+	return hwr_state.requested && !hwr_state.active;
+}
+
+int HWR_contextReset(unsigned max_width, unsigned max_height) {
+	if (!hwr_state.requested) return 0;
+	if (hwr_state.active) {
+		HWR_growFramebuffer(max_width, max_height);
+		return 1;
+	}
+
+	int w = max_width > 0 ? (int)max_width : 640;
+	int h = max_height > 0 ? (int)max_height : 480;
+	int max_tex = PLAT_HWR_maxTextureSize();
+	if (w > max_tex) w = max_tex;
+	if (h > max_tex) h = max_tex;
+
+	if (!PLAT_HWR_create(w, h, hwr_state.cb.depth, hwr_state.cb.stencil)) {
+		LOG_error("HWR: Failed to create %dx%d framebuffer\n", w, h);
+		hwr_state.active = 0;
+		return 0;
+	}
+
+	hwr_state.fbo_w = w;
+	hwr_state.fbo_h = h;
+	hwr_state.active = 1;
+
+	if (hwr_state.cb.context_reset) {
+		hwr_state.cb.context_reset();
+		PLAT_HWR_restoreFrontendState();
+	}
+	return 1;
+}
+
+void HWR_growFramebuffer(unsigned width, unsigned height) {
+	if (!hwr_state.active) return;
+
+	int max_tex = PLAT_HWR_maxTextureSize();
+	int w = (int)width;
+	int h = (int)height;
+	if (w > max_tex) w = max_tex;
+	if (h > max_tex) h = max_tex;
+
+	if (w <= hwr_state.fbo_w && h <= hwr_state.fbo_h) return;
+
+	int new_w = w > hwr_state.fbo_w ? w : hwr_state.fbo_w;
+	int new_h = h > hwr_state.fbo_h ? h : hwr_state.fbo_h;
+
+	if (PLAT_HWR_resize(new_w, new_h)) {
+		hwr_state.fbo_w = new_w;
+		hwr_state.fbo_h = new_h;
+	}
+}
+
+void HWR_contextDestroy(void) {
+	if (hwr_state.active) {
+		PLAT_HWR_makeCurrent();
+		if (hwr_state.cb.context_destroy) {
+			hwr_state.cb.context_destroy();
+		}
+		PLAT_HWR_destroy();
+	}
+	memset(&hwr_state, 0, sizeof(hwr_state));
+}
+
+void HWR_beforeRun(void) {
+	if (hwr_state.active) {
+		PLAT_HWR_prepareCoreFrame();
+	}
+}
+
+void HWR_makeCurrent(void) {
+	if (hwr_state.active) {
+		PLAT_HWR_makeCurrent();
+	}
+}
+
+int HWR_submitFrame(const void *data, unsigned *width, unsigned *height) {
+	if (!hwr_state.active) return 0;
+
+	PLAT_HWR_restoreFrontendState();
+	if (data == NULL) {
+		if (hwr_state.last_w <= 0 || hwr_state.last_h <= 0) return 0;
+		if (width) *width = (unsigned)hwr_state.last_w;
+		if (height) *height = (unsigned)hwr_state.last_h;
+		PLAT_HWR_setFrame(hwr_state.last_w, hwr_state.last_h, hwr_state.cb.bottom_left_origin);
+		return 1;
+	}
+	if (data != RETRO_HW_FRAME_BUFFER_VALID || !width || !height || *width == 0 || *height == 0) {
+		return 0;
+	}
+
+	int w = (int)*width;
+	int h = (int)*height;
+	if (w > hwr_state.fbo_w) w = hwr_state.fbo_w;
+	if (h > hwr_state.fbo_h) h = hwr_state.fbo_h;
+	if (w <= 0 || h <= 0) return 0;
+
+	hwr_state.last_w = w;
+	hwr_state.last_h = h;
+	*width = (unsigned)w;
+	*height = (unsigned)h;
+	PLAT_HWR_setFrame(w, h, hwr_state.cb.bottom_left_origin);
+	return 1;
+}
+
+void HWR_prepareSoftwareFrame(void) {
+	if (!hwr_state.active) return;
+	PLAT_HWR_restoreFrontendState();
+	PLAT_HWR_clearFrame();
+}
 
 static retro_time_t perf_get_time_usec(void) {
 	return (retro_time_t)getMicroseconds();
@@ -192,6 +374,9 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 	case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: { /* 32 */
 		const struct retro_system_av_info *av = (const struct retro_system_av_info *)data;
 		if (av) {
+			HWR_growFramebuffer(av->geometry.max_width, av->geometry.max_height);
+			HWR_growFramebuffer(av->geometry.base_width, av->geometry.base_height);
+
 			double a = av->geometry.aspect_ratio;
 			if (a <= 0) a = (double)av->geometry.base_width / av->geometry.base_height;
 			core.aspect_ratio = a;
@@ -233,6 +418,8 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 	case RETRO_ENVIRONMENT_SET_GEOMETRY: { /* 37 */
 		const struct retro_game_geometry *geom = (const struct retro_game_geometry *)data;
 		if (geom) {
+			HWR_growFramebuffer(geom->max_width, geom->max_height);
+			HWR_growFramebuffer(geom->base_width, geom->base_height);
 			double a = geom->aspect_ratio;
 			if (a <= 0) {
 				a = geom->base_height > 0 ? (double)geom->base_width / geom->base_height : core.aspect_ratio;
@@ -421,23 +608,18 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 		if (data) *(bool*)data = (fast_forward != 0);
 		return true;
 	}
-	case RETRO_ENVIRONMENT_SET_HW_RENDER:
-	{
-		struct retro_hw_render_callback *cb = (struct retro_hw_render_callback*)data;
-
-		// Log the requested context
-		LOG_info("Core requested GL context type: %d, version %d.%d\n",
-			cb->context_type, cb->version_major, cb->version_minor);
-
-		// Fallback if version is 0.0 or other unexpected values
-		if (cb->context_type == 4 && cb->version_major == 0 && cb->version_minor == 0) {
-			LOG_info("Core requested invalid GL context type or version, defaulting to GLES 2.0\n");
-			cb->context_type = RETRO_HW_CONTEXT_OPENGLES3;
-			cb->version_major = 3;
-			cb->version_minor = 0;
+	case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER: {
+		if (data) {
+#if defined(USE_GLES)
+			*(unsigned*)data = RETRO_HW_CONTEXT_OPENGLES3;
+#else
+			*(unsigned*)data = RETRO_HW_CONTEXT_OPENGL_CORE;
+#endif
 		}
-
 		return true;
+	}
+	case RETRO_ENVIRONMENT_SET_HW_RENDER: {
+		return HWR_setCallback((struct retro_hw_render_callback*)data);
 	}
 	case RETRO_ENVIRONMENT_GET_PERF_INTERFACE: {
 		struct retro_perf_callback *perf = (struct retro_perf_callback*)data;

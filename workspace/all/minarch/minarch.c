@@ -206,6 +206,10 @@ int main(int argc , char* argv[]) {
 	// why not move to Core_init()?
 	Menu_setCoreVersionDesc(core.version);
 	Core_load();
+	if (HWR_contextFailed()) {
+		LOG_error("HW render requested by core but context setup failed; exiting\n");
+		goto finish;
+	}
 	
 	Input_init(NULL);
 	Config_readOptions(); // but others load and report options later (eg. nes)
