@@ -14,6 +14,38 @@ static bool set_rumble_state(unsigned port, enum retro_rumble_effect effect, uin
 	return 1;
 }
 
+#ifndef RETRO_SIMD_NEON
+#define RETRO_SIMD_NEON (1 << 3)
+#endif
+#ifndef RETRO_SIMD_ASIMD
+#define RETRO_SIMD_ASIMD (1 << 12)
+#endif
+
+static retro_time_t perf_get_time_usec(void) {
+	return (retro_time_t)getMicroseconds();
+}
+
+static retro_perf_tick_t perf_get_counter(void) {
+	return (retro_perf_tick_t)getMicroseconds();
+}
+
+static uint64_t perf_get_cpu_features(void) {
+#if defined(__aarch64__)
+	return RETRO_SIMD_NEON | RETRO_SIMD_ASIMD;
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+	return RETRO_SIMD_NEON;
+#else
+	return 0;
+#endif
+}
+
+static void perf_noop_counter(struct retro_perf_counter *counter) {
+	(void)counter;
+}
+
+static void perf_noop_log(void) {
+}
+
 bool environment_callback(unsigned cmd, void *data) { // copied from picoarch initially
 	// LOG_info("environment_callback: %i\n", cmd);
 
@@ -130,8 +162,7 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 		break;
 	}
 	case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: { /* 22 */
-		// LOG_info("%i: RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK\n", cmd);
-		break;
+		return false;
 	}
 	case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: { /* 23 */
 	        struct retro_rumble_interface *iface = (struct retro_rumble_interface*)data;
@@ -163,10 +194,13 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 		if (av) {
 			double a = av->geometry.aspect_ratio;
 			if (a <= 0) a = (double)av->geometry.base_width / av->geometry.base_height;
-
-			core.fps = av->timing.fps;
-			core.sample_rate = av->timing.sample_rate;
 			core.aspect_ratio = a;
+
+			if (core.fps != av->timing.fps || core.sample_rate != av->timing.sample_rate) {
+				core.fps = av->timing.fps;
+				core.sample_rate = av->timing.sample_rate;
+				SND_resetAudio(core.sample_rate, core.fps);
+			}
 			renderer.dst_p = 0;
 		}
 		return true;
@@ -200,7 +234,9 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 		const struct retro_game_geometry *geom = (const struct retro_game_geometry *)data;
 		if (geom) {
 			double a = geom->aspect_ratio;
-			if (a <= 0) a = (double)geom->base_width / geom->base_height;
+			if (a <= 0) {
+				a = geom->base_height > 0 ? (double)geom->base_width / geom->base_height : core.aspect_ratio;
+			}
 			core.aspect_ratio = a;
 			renderer.dst_p = 0;
 		}
@@ -381,10 +417,10 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 	// 	puts("RETRO_ENVIRONMENT_GET_THROTTLE_STATE"); fflush(stdout);
 	// 	break;
 	// }
-	// case RETRO_ENVIRONMENT_GET_FASTFORWARDING: {
-	// 	puts("RETRO_ENVIRONMENT_GET_FASTFORWARDING"); fflush(stdout);
-	// 	break;
-	// };
+	case RETRO_ENVIRONMENT_GET_FASTFORWARDING: {
+		if (data) *(bool*)data = (fast_forward != 0);
+		return true;
+	}
 	case RETRO_ENVIRONMENT_SET_HW_RENDER:
 	{
 		struct retro_hw_render_callback *cb = (struct retro_hw_render_callback*)data;
@@ -401,6 +437,19 @@ bool environment_callback(unsigned cmd, void *data) { // copied from picoarch in
 			cb->version_minor = 0;
 		}
 
+		return true;
+	}
+	case RETRO_ENVIRONMENT_GET_PERF_INTERFACE: {
+		struct retro_perf_callback *perf = (struct retro_perf_callback*)data;
+		if (perf) {
+			perf->get_time_usec = perf_get_time_usec;
+			perf->get_perf_counter = perf_get_counter;
+			perf->get_cpu_features = perf_get_cpu_features;
+			perf->perf_register = perf_noop_counter;
+			perf->perf_start = perf_noop_counter;
+			perf->perf_stop = perf_noop_counter;
+			perf->perf_log = perf_noop_log;
+		}
 		return true;
 	}
 	default:
