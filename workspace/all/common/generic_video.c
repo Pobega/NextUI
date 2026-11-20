@@ -825,15 +825,18 @@ void PLAT_clearVideo(SDL_Surface* screen) {
 void PLAT_clearAll(void) {
 	// ok honestely mixing SDL and OpenGL is really bad, but hey it works just got to sometimes clear gpu stuff and pull context back to SDL
 	// so yeah clear all layers and pull a flip() to make it switch back to SDL before clearing
+	PLAT_clearVideo(vid.screen);
+	PLAT_clearLayers(0);
+	PLAT_flip(vid.screen,0);
 	PLAT_clearLayers(0);
 	PLAT_flip(vid.screen,0);
 	PLAT_clearLayers(0);
 	PLAT_flip(vid.screen,0);
 
 	// then do normal SDL clearing stuff
-	PLAT_clearVideo(vid.screen);
 	SDL_SetRenderDrawColor(vid.renderer, 0, 0, 0, 0);
 	SDL_RenderClear(vid.renderer);
+	notif.clear_frames = 3;
 }
 
 void PLAT_setVsync(int vsync) {
@@ -2065,9 +2068,15 @@ void PLAT_GL_Swap() {
         }
     }
 
+	SDL_GL_MakeCurrent(vid.window, vid.gl_context);
+
     static int lastframecount = 0;
     if (reloadShaderTextures) lastframecount = frame_count;
     if (frame_count < lastframecount + 3 || notif.clear_frames > 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDisable(GL_SCISSOR_TEST);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if (notif.clear_frames > 0) notif.clear_frames--;
     }
@@ -2078,8 +2087,6 @@ void PLAT_GL_Swap() {
     if (!vid.blit->src) {
         return;
     }
-
-	SDL_GL_MakeCurrent(vid.window, vid.gl_context);
 
 	static GLuint effect_tex = 0;
 	static int effect_w = 0, effect_h = 0;
