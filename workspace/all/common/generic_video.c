@@ -178,6 +178,25 @@ void PLAT_clearNotificationSurface(void) {
     notif.clear_frames = 3;  // Clear for 3 frames (triple buffering safety)
 }
 
+#ifndef GL_READ_FRAMEBUFFER
+#define GL_READ_FRAMEBUFFER 0x8CA8
+#endif
+#ifndef GL_DRAW_FRAMEBUFFER
+#define GL_DRAW_FRAMEBUFFER 0x8CA9
+#endif
+#ifndef GL_READ_FRAMEBUFFER_BINDING
+#define GL_READ_FRAMEBUFFER_BINDING 0x8CAA
+#endif
+#ifndef GL_DRAW_FRAMEBUFFER_BINDING
+#define GL_DRAW_FRAMEBUFFER_BINDING 0x8CA6
+#endif
+#ifndef GL_PIXEL_PACK_BUFFER
+#define GL_PIXEL_PACK_BUFFER 0x88EB
+#endif
+#ifndef GL_PIXEL_PACK_BUFFER_BINDING
+#define GL_PIXEL_PACK_BUFFER_BINDING 0x88ED
+#endif
+
 
 #define MAX_SHADERLINE_LENGTH 512
 int extractPragmaParameters(const char *shaderSource, ShaderParam *params, int maxParams) {
@@ -1681,6 +1700,9 @@ void setRectToAspectRatio(SDL_Rect* dst_rect) {
 
 void PLAT_blitRenderer(GFX_Renderer* renderer) {
 	vid.blit = renderer;
+	if (!renderer || !renderer->src) {
+		return;
+	}
 	SDL_RenderClear(vid.renderer);
 	resizeVideo(vid.blit->true_w,vid.blit->true_h,vid.blit->src_p);
 }
@@ -1708,7 +1730,7 @@ void PLAT_flipHidden() {
 void PLAT_flip(SDL_Surface* IGNORED, int ignored) {
 	// dont think we need this here tbh
 	// SDL_RenderClear(vid.renderer);
-	if (!vid.blit) {
+	if (!vid.blit || !vid.blit->src) {
         resizeVideo(device_width, device_height, FIXED_PITCH); // !!!???
         SDL_UpdateTexture(vid.stream_layer1, NULL, vid.screen->pixels, vid.screen->pitch);
 		SDL_RenderCopy(vid.renderer, vid.target_layer1, NULL, NULL);
@@ -2068,6 +2090,10 @@ void PLAT_GL_Swap() {
         }
     }
 
+    if (!vid.blit || !vid.blit->src) {
+        return;
+    }
+
 	SDL_GL_MakeCurrent(vid.window, vid.gl_context);
 
     static int lastframecount = 0;
@@ -2083,10 +2109,6 @@ void PLAT_GL_Swap() {
 
     SDL_Rect dst_rect = {0, 0, device_width, device_height};
     setRectToAspectRatio(&dst_rect);
-
-    if (!vid.blit->src) {
-        return;
-    }
 
 	static GLuint effect_tex = 0;
 	static int effect_w = 0, effect_h = 0;
@@ -2370,7 +2392,24 @@ void PLAT_pixelFlipper(uint8_t* pixels, int width, int height) {
 }
 
 unsigned char* PLAT_GL_screenCapture(int* outWidth, int* outHeight) {
+    if (vid.window && vid.gl_context) {
+        SDL_GL_MakeCurrent(vid.window, vid.gl_context);
+    }
+
+    // Hotkey screenshots/quick-saves call this from input_poll_callback() mid-retro_run().
+    GLint prev_draw_fb = 0, prev_read_fb = 0, prev_pack_buf = 0, prev_pack_align = 4;
+    GLint prev_viewport[4] = {0, 0, 0, 0};
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &prev_draw_fb);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prev_read_fb);
+    glGetIntegerv(GL_VIEWPORT, prev_viewport);
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &prev_pack_buf);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &prev_pack_align);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, device_width, device_height);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    glPixelStorei(GL_PACK_ALIGNMENT, 4);
+
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
 
@@ -2381,11 +2420,16 @@ unsigned char* PLAT_GL_screenCapture(int* outWidth, int* outHeight) {
     if (outHeight) *outHeight = height;
 
     unsigned char* pixels = malloc(width * height * 4); // RGBA
-    if (!pixels) return NULL;
+    if (pixels) {
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        PLAT_pixelFlipper(pixels, width, height);
+    }
 
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-	PLAT_pixelFlipper(pixels, width, height);
+    glPixelStorei(GL_PACK_ALIGNMENT, prev_pack_align);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, (GLuint)prev_pack_buf);
+    glViewport(prev_viewport[0], prev_viewport[1], prev_viewport[2], prev_viewport[3]);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prev_draw_fb);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)prev_read_fb);
 
     return pixels; // caller must free
 }
